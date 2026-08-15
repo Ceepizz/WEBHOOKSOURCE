@@ -1,0 +1,312 @@
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Globals = getgenv and getgenv() or _G
+
+local LOBBY_PLACE_ID = 3260590327
+local GATLING_PRICE = 35000
+local GATLING_TOWER = "Gatling Gun"
+local LEVEL_GOAL = 175
+
+local SendRequest =
+    request
+    or http_request
+    or httprequest
+    or (syn and syn.request)
+    or (GetDevice and GetDevice().request)
+
+local ProgressWebhook = {}
+local WebhookURL = tostring(Globals.WebhookURL or "")
+local SentThisExecution = false
+
+local function Trim(text)
+    return tostring(text or "")
+        :gsub("^%s+", "")
+        :gsub("%s+$", "")
+end
+
+local function GetStat(name)
+    local object = LocalPlayer:FindFirstChild(name)
+
+    if object and object.Value ~= nil then
+        return tonumber(object.Value) or 0
+    end
+
+    local attribute = LocalPlayer:GetAttribute(name)
+
+    if attribute ~= nil then
+        return tonumber(attribute) or 0
+    end
+
+    local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+    local stat = leaderstats and leaderstats:FindFirstChild(name)
+
+    if stat and stat.Value ~= nil then
+        return tonumber(stat.Value) or 0
+    end
+
+    return 0
+end
+
+local function FormatNumber(number)
+    local str = tostring(math.floor(tonumber(number) or 0))
+
+    while true do
+        local newStr, count = str:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+        str = newStr
+
+        if count == 0 then
+            break
+        end
+    end
+
+    return str
+end
+
+local function GetPercent(value, goal)
+    value = tonumber(value) or 0
+    goal = tonumber(goal) or 1
+
+    if goal <= 0 then
+        return 0
+    end
+
+    return math.clamp(
+        math.floor((value / goal) * 100 + 0.5),
+        0,
+        100
+    )
+end
+
+local function ProgressBar(percent)
+    local total = 20
+    local filled = math.clamp(
+        math.floor((percent / 100) * total + 0.5),
+        0,
+        total
+    )
+
+    return string.rep("▰", filled)
+        .. string.rep("▱", total - filled)
+end
+
+local function IsGatlingOwned()
+    local inventory = PlayerGui:FindFirstChild("ReactUniversalInventoryView")
+
+    if not inventory then
+        inventory = PlayerGui:WaitForChild(
+            "ReactUniversalInventoryView",
+            30
+        )
+    end
+
+    if not inventory then
+        return false
+    end
+
+    local holder = inventory:FindFirstChild("Holder")
+    local windowFrame = holder and holder:FindFirstChild("windowFrame")
+    local towerFrame = windowFrame
+        and windowFrame:FindFirstChild("towersInventoryFrame")
+
+    if not towerFrame then
+        return false
+    end
+
+    for _, tower in ipairs(towerFrame:GetDescendants()) do
+        if tower:IsA("Frame") then
+            local refLabel = tower:FindFirstChild("refLabel", true)
+            local background = tower:FindFirstChild("background", true)
+
+            if refLabel
+                and background
+                and refLabel.Text == GATLING_TOWER
+                and background.Visible == false then
+
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+local function BuildFields(level, coins, gatlingOwned)
+    local fields = {}
+
+    if gatlingOwned then
+        table.insert(fields, {
+            name = "🔫 Gatling Gun",
+            value = "✅ Owned",
+            inline = false
+        })
+
+        table.insert(fields, {
+            name = "⭐ Current Level",
+            value = string.format("**Level %d**", level),
+            inline = false
+        })
+
+        table.insert(fields, {
+            name = "✅ Auto Progress Completed",
+            value = "All progression goals completed.",
+            inline = false
+        })
+
+        return fields
+    end
+
+    local coinPercent = GetPercent(coins, GATLING_PRICE)
+
+    table.insert(fields, {
+        name = "💰 Gatling Progress",
+        value = string.format(
+            "**%s / %s Coins**\n`%s` **%d%%**",
+            FormatNumber(coins),
+            FormatNumber(GATLING_PRICE),
+            ProgressBar(coinPercent),
+            coinPercent
+        ),
+        inline = false
+    })
+
+    if level >= LEVEL_GOAL then
+        table.insert(fields, {
+            name = "⭐ Current Level",
+            value = string.format("**Level %d**", level),
+            inline = false
+        })
+
+        table.insert(fields, {
+            name = "🎯 Current Goal",
+            value = "`Gatling Gun`",
+            inline = false
+        })
+    else
+        local levelPercent = GetPercent(level, LEVEL_GOAL)
+
+        table.insert(fields, {
+            name = "⭐ Level Progress",
+            value = string.format(
+                "**%d / %d**\n`%s` **%d%%**",
+                level,
+                LEVEL_GOAL,
+                ProgressBar(levelPercent),
+                levelPercent
+            ),
+            inline = false
+        })
+
+        table.insert(fields, {
+            name = "🎯 Current Goals",
+            value = "`Gatling Gun` • `Level 175`",
+            inline = false
+        })
+    end
+
+    return fields
+end
+
+function ProgressWebhook.SetWebhook(url)
+    WebhookURL = Trim(url)
+    Globals.WebhookURL = WebhookURL
+    return true
+end
+
+function ProgressWebhook.GetWebhook()
+    return WebhookURL
+end
+
+function ProgressWebhook.Send(force)
+    if game.PlaceId ~= LOBBY_PLACE_ID then
+        return false, "Not in lobby"
+    end
+
+    if SentThisExecution and not force then
+        return false, "Already sent"
+    end
+
+    local webhook = Trim(WebhookURL)
+
+    if webhook == "" then
+        return false, "Webhook is empty"
+    end
+
+    if not SendRequest then
+        return false, "Executor does not support HTTP requests"
+    end
+
+    local level = GetStat("Level")
+    local coins = GetStat("Coins")
+    local gatlingOwned = IsGatlingOwned()
+    local fields = BuildFields(level, coins, gatlingOwned)
+
+    local body = HttpService:JSONEncode({
+        username = "Auto Progress",
+        embeds = {
+            {
+                title = "⚡ Auto Progress",
+                description = string.format(
+                    "Current progress for **%s**",
+                    LocalPlayer.Name
+                ),
+                color = 7077586,
+                fields = fields,
+                footer = {
+                    text = "Auto Progress • Progress Tracker"
+                },
+                timestamp = DateTime.now():ToIsoDate()
+            }
+        }
+    })
+
+    local ok, response = pcall(function()
+        return SendRequest({
+            Url = webhook,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = body
+        })
+    end)
+
+    if not ok then
+        return false, tostring(response)
+    end
+
+    if type(response) == "table"
+        and response.StatusCode
+        and (response.StatusCode < 200 or response.StatusCode >= 300) then
+
+        return false, "HTTP " .. tostring(response.StatusCode)
+    end
+
+    SentThisExecution = true
+    return true, gatlingOwned and "Gatling Owned" or "Progress Sent"
+end
+
+function ProgressWebhook.Start()
+    if game.PlaceId ~= LOBBY_PLACE_ID then
+        return false
+    end
+
+    task.spawn(function()
+        if not game:IsLoaded() then
+            game.Loaded:Wait()
+        end
+
+        PlayerGui:WaitForChild("ReactLobbyHud", 30)
+        task.wait(3)
+        ProgressWebhook.Send(false)
+    end)
+
+    return true
+end
+
+shared.ProgressWebhook = ProgressWebhook
+ProgressWebhook.Start()
+
+return ProgressWebhook
