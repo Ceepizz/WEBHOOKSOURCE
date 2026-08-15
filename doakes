@@ -133,80 +133,136 @@ local function IsGatlingOwned()
     return false
 end
 
-local function BuildFields(level, coins, gatlingOwned)
-    local fields = {}
+local COIN_IMAGE = "https://raw.githubusercontent.com/Ceepizz/WEBHOOKSOURCE/refs/heads/main/CoinV2.png"
+local EXP_IMAGE = "https://raw.githubusercontent.com/Ceepizz/WEBHOOKSOURCE/refs/heads/main/Exp.png"
+local GATLING_IMAGE = "https://raw.githubusercontent.com/Ceepizz/WEBHOOKSOURCE/refs/heads/main/GatlingGunIcon.png"
+
+local function BuildEmbeds(level, coins, gatlingOwned)
+    local embeds = {}
 
     if gatlingOwned then
-        table.insert(fields, {
-            name = "🔫 Gatling Gun",
-            value = "✅ Owned",
-            inline = false
+        table.insert(embeds, {
+            title = "Auto Progress",
+            description = string.format(
+                "Current progress for **%s**",
+                LocalPlayer.Name
+            ),
+            color = 7077586,
+            thumbnail = {
+                url = GATLING_IMAGE
+            },
+            fields = {
+                {
+                    name = "Gatling Gun",
+                    value = "**Owned**",
+                    inline = false
+                },
+                {
+                    name = "Current Level",
+                    value = string.format("**Level %d**", level),
+                    inline = false
+                },
+                {
+                    name = "Auto Progress Completed",
+                    value = "All progression goals completed.",
+                    inline = false
+                }
+            },
+            footer = {
+                text = "Auto Progress • Progress Tracker"
+            },
+            timestamp = DateTime.now():ToIsoDate()
         })
 
-        table.insert(fields, {
-            name = "⭐ Current Level",
-            value = string.format("**Level %d**", level),
-            inline = false
-        })
-
-        table.insert(fields, {
-            name = "✅ Auto Progress Completed",
-            value = "All progression goals completed.",
-            inline = false
-        })
-
-        return fields
+        return embeds
     end
 
     local coinPercent = GetPercent(coins, GATLING_PRICE)
 
-    table.insert(fields, {
-        name = "💰 Gatling Progress",
-        value = string.format(
-            "**%s / %s Coins**\n`%s` **%d%%**",
-            FormatNumber(coins),
-            FormatNumber(GATLING_PRICE),
-            ProgressBar(coinPercent),
-            coinPercent
+    table.insert(embeds, {
+        title = "Auto Progress",
+        description = string.format(
+            "Current progress for **%s**",
+            LocalPlayer.Name
         ),
-        inline = false
+        color = 7077586,
+        thumbnail = {
+            url = COIN_IMAGE
+        },
+        fields = {
+            {
+                name = "Gatling Progress",
+                value = string.format(
+                    "**%s / %s Coins**\n`%s` **%d%%**",
+                    FormatNumber(coins),
+                    FormatNumber(GATLING_PRICE),
+                    ProgressBar(coinPercent),
+                    coinPercent
+                ),
+                inline = false
+            }
+        }
     })
 
     if level >= LEVEL_GOAL then
-        table.insert(fields, {
-            name = "⭐ Current Level",
-            value = string.format("**Level %d**", level),
-            inline = false
-        })
-
-        table.insert(fields, {
-            name = "🎯 Current Goal",
-            value = "`Gatling Gun`",
-            inline = false
+        table.insert(embeds, {
+            color = 7077586,
+            thumbnail = {
+                url = EXP_IMAGE
+            },
+            fields = {
+                {
+                    name = "Current Level",
+                    value = string.format("**Level %d**", level),
+                    inline = false
+                }
+            }
         })
     else
         local levelPercent = GetPercent(level, LEVEL_GOAL)
 
-        table.insert(fields, {
-            name = "⭐ Level Progress",
-            value = string.format(
-                "**%d / %d**\n`%s` **%d%%**",
-                level,
-                LEVEL_GOAL,
-                ProgressBar(levelPercent),
-                levelPercent
-            ),
-            inline = false
-        })
-
-        table.insert(fields, {
-            name = "🎯 Current Goals",
-            value = "`Gatling Gun` • `Level 175`",
-            inline = false
+        table.insert(embeds, {
+            color = 7077586,
+            thumbnail = {
+                url = EXP_IMAGE
+            },
+            fields = {
+                {
+                    name = "Level Progress",
+                    value = string.format(
+                        "**%d / %d**\n`%s` **%d%%**",
+                        level,
+                        LEVEL_GOAL,
+                        ProgressBar(levelPercent),
+                        levelPercent
+                    ),
+                    inline = false
+                }
+            }
         })
     end
 
-    return fields
+    table.insert(embeds, {
+        color = 7077586,
+        thumbnail = {
+            url = GATLING_IMAGE
+        },
+        fields = {
+            {
+                name = level >= LEVEL_GOAL and "Current Goal" or "Current Goals",
+                value = level >= LEVEL_GOAL
+                    and "`Gatling Gun`"
+                    or "`Gatling Gun` • `Level 175`",
+                inline = false
+            }
+        },
+        footer = {
+            text = "Auto Progress • Progress Tracker"
+        },
+        timestamp = DateTime.now():ToIsoDate()
+    })
+
+    return embeds
 end
 
 function ProgressWebhook.SetWebhook(url)
@@ -241,25 +297,11 @@ function ProgressWebhook.Send(force)
     local level = GetStat("Level")
     local coins = GetStat("Coins")
     local gatlingOwned = IsGatlingOwned()
-    local fields = BuildFields(level, coins, gatlingOwned)
+    local embeds = BuildEmbeds(level, coins, gatlingOwned)
 
     local body = HttpService:JSONEncode({
         username = "Auto Progress",
-        embeds = {
-            {
-                title = "⚡ Auto Progress",
-                description = string.format(
-                    "Current progress for **%s**",
-                    LocalPlayer.Name
-                ),
-                color = 7077586,
-                fields = fields,
-                footer = {
-                    text = "Auto Progress • Progress Tracker"
-                },
-                timestamp = DateTime.now():ToIsoDate()
-            }
-        }
+        embeds = embeds
     })
 
     local ok, response = pcall(function()
