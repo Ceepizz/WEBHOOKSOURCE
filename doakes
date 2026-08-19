@@ -302,70 +302,101 @@ local function BuildEmbed(level)
     local gatlingOwned =
         IsGatlingOwned()
 
-    local levelPercent =
-        GetPercent(
-            level,
-            LEVEL_GOAL
-        )
+    local levelTarget
 
-    local coinPercent =
-        GetPercent(
-            coins,
-            GATLING_PRICE
-        )
-
-    local levelProgress
-
-    if level >= LEVEL_GOAL then
-        levelProgress =
-            FormatNumber(level)
-            .. " / "
-            .. FormatNumber(LEVEL_GOAL)
-            .. "\n"
-            .. ProgressBar(100)
-            .. " 100%"
+    if level < 15 then
+        levelTarget = 15
+    elseif level < 50 then
+        levelTarget = 50
+    elseif level < LEVEL_GOAL then
+        levelTarget = LEVEL_GOAL
     else
-        levelProgress =
-            FormatNumber(level)
-            .. " / "
-            .. FormatNumber(LEVEL_GOAL)
-            .. "\n"
-            .. ProgressBar(levelPercent)
-            .. " "
-            .. tostring(levelPercent)
-            .. "%"
+        levelTarget = nil
     end
 
-    local gatlingProgress
+    local fields = {}
+
+    if levelTarget then
+        local levelPercent =
+            GetPercent(
+                level,
+                levelTarget
+            )
+
+        table.insert(fields, {
+            name = "Level Progress",
+            value =
+                FormatNumber(level)
+                .. " / "
+                .. FormatNumber(levelTarget)
+                .. "\n"
+                .. ProgressBar(levelPercent)
+                .. " "
+                .. tostring(levelPercent)
+                .. "%",
+            inline = false
+        })
+    else
+        table.insert(fields, {
+            name = "Level",
+            value = FormatNumber(level),
+            inline = false
+        })
+    end
 
     if gatlingOwned then
-        gatlingProgress =
-            "Gatling Gun Unlocked"
+        table.insert(fields, {
+            name = "Gatling Gun",
+            value = "Owned",
+            inline = false
+        })
+
+        table.insert(fields, {
+            name = "Coins",
+            value = FormatNumber(coins),
+            inline = false
+        })
     else
-        gatlingProgress =
-            FormatNumber(coins)
-            .. " / "
-            .. FormatNumber(GATLING_PRICE)
-            .. " Coins\n"
-            .. ProgressBar(coinPercent)
-            .. " "
-            .. tostring(coinPercent)
-            .. "%"
+        local coinPercent =
+            GetPercent(
+                coins,
+                GATLING_PRICE
+            )
+
+        table.insert(fields, {
+            name = "Gatling Progress",
+            value =
+                FormatNumber(coins)
+                .. " / "
+                .. FormatNumber(GATLING_PRICE)
+                .. " Coins\n"
+                .. ProgressBar(coinPercent)
+                .. " "
+                .. tostring(coinPercent)
+                .. "%",
+            inline = false
+        })
     end
 
     local goal
 
     if gatlingOwned then
         goal = "Completed"
+    elseif level < 15 then
+        goal = "Reach Level 15"
+    elseif level < 50 then
+        goal = "Reach Level 50"
     elseif level < LEVEL_GOAL then
-        goal =
-            "Reach Level "
-            .. tostring(LEVEL_GOAL)
-            .. " and unlock Gatling Gun"
+        goal = "Reach Level 175"
     else
-        goal =
-            "Unlock Gatling Gun"
+        goal = "Unlock Gatling Gun"
     end
+
+    table.insert(fields, {
+        name = "Current Goal",
+        value = goal,
+        inline = false
+    })
 
     return {
         title = "Auto Progress",
@@ -377,27 +408,11 @@ local function BuildEmbed(level)
 
         color = 7085778,
 
-        fields = {
-            {
-                name = "Level Progress",
-                value = levelProgress,
-                inline = false
-            },
-            {
-                name = "Gatling Progress",
-                value = gatlingProgress,
-                inline = false
-            },
-            {
-                name = "Current Goal",
-                value = goal,
-                inline = false
-            }
-        },
+        fields = fields,
 
         footer = {
             text =
-                "Level Up Detected | Aether Hub"
+                "Level Up Detected | Auto Progress"
         },
 
         timestamp =
@@ -439,7 +454,7 @@ function ProgressWebhook.Send(level)
     Sending = true
 
     local payload = {
-        username = "Aether Hub",
+        username = "Auto Progress",
 
         embeds = {
             BuildEmbed(level)
