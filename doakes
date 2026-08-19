@@ -65,22 +65,6 @@ local function GetPercent(current, maximum)
     )
 end
 
-local function ProgressBar(percent)
-    percent = math.clamp(
-        tonumber(percent) or 0,
-        0,
-        100
-    )
-
-    local totalBlocks = 20
-    local filled = math.floor(
-        (percent / 100) * totalBlocks
-    )
-
-    return string.rep("█", filled)
-        .. string.rep("░", totalBlocks - filled)
-end
-
 local function GetStat(name)
     local direct = LocalPlayer:FindFirstChild(name)
 
@@ -328,12 +312,7 @@ local function BuildEmbed(level)
             value =
                 FormatNumber(level)
                 .. " / "
-                .. FormatNumber(levelTarget)
-                .. "\n"
-                .. ProgressBar(levelPercent)
-                .. " "
-                .. tostring(levelPercent)
-                .. "%",
+                .. FormatNumber(levelTarget),
             inline = false
         })
     else
@@ -369,11 +348,7 @@ local function BuildEmbed(level)
                 FormatNumber(coins)
                 .. " / "
                 .. FormatNumber(GATLING_PRICE)
-                .. " Coins\n"
-                .. ProgressBar(coinPercent)
-                .. " "
-                .. tostring(coinPercent)
-                .. "%",
+                .. " Coins",
             inline = false
         })
     end
