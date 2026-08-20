@@ -264,9 +264,9 @@ local function BuildEmbed(eventType, data)
             inline = false
         })
     else
-        title = "📈 Progression Update"
+        title = "📊 Current Progress"
         description =
-            "Current progression for **"
+            "Current progression stats for **"
             .. LocalPlayer.Name
             .. "**."
     end
@@ -386,7 +386,22 @@ function ProgressWebhook.Send(eventType, data)
         return SendPayload(eventType, data)
     end
 
-    return false, "Webhook only sends for level ups or tower purchases"
+    if eventType == true
+        or eventType == "manual"
+        or eventType == "stats"
+        or eventType == nil then
+
+        local owned =
+            GetOwnedTowers()
+            or OwnedTowers
+
+        return SendPayload("manual", {
+            Level = GetCurrentLevel(),
+            OwnedTowerCount = CountOwnedTowers(owned)
+        })
+    end
+
+    return false, "Unknown webhook event"
 end
 
 function ProgressWebhook.GetLevel()
