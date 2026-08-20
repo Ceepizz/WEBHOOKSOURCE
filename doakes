@@ -306,7 +306,7 @@ local function BuildEmbed(eventType, data)
             name = "Level",
             value =
                 FormatNumber(previousLevel)
-                .. " → **"
+                .. "  **"
                 .. FormatNumber(level)
                 .. "**",
             inline = false
@@ -369,7 +369,7 @@ local function BuildEmbed(eventType, data)
         color = EMBED_COLOR,
         fields = fields,
         footer = {
-            text = "Rya Auto Progression • Progress Tracker"
+            text = "Rya Auto Progression  Progress Tracker"
         },
         timestamp = DateTime.now():ToIsoDate()
     }
