@@ -296,7 +296,7 @@ local function BuildEmbed(eventType, data)
             tonumber(data.PreviousLevel)
             or math.max(level - 1, 0)
 
-        title = "⬆️ Level Up!"
+        title = "Level Up!"
         description =
             "**"
             .. LocalPlayer.Name
@@ -315,7 +315,7 @@ local function BuildEmbed(eventType, data)
         local towerName =
             Trim(data.TowerName)
 
-        title = "🛒 Tower Purchased!"
+        title = "Tower Purchased!"
         description =
             "**"
             .. LocalPlayer.Name
@@ -330,7 +330,7 @@ local function BuildEmbed(eventType, data)
             inline = false
         })
     else
-        title = "📊 Current Progress"
+        title = "Current Progress"
         description =
             "Current progression stats for **"
             .. LocalPlayer.Name
@@ -345,13 +345,13 @@ local function BuildEmbed(eventType, data)
 
     table.insert(fields, {
         name = "Coins",
-        value = "🪙 " .. FormatNumber(coins),
+        value = FormatNumber(coins),
         inline = true
     })
 
     table.insert(fields, {
         name = "Gems",
-        value = "💎 " .. FormatNumber(gems),
+        value = FormatNumber(gems),
         inline = true
     })
 
