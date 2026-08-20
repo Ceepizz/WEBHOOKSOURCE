@@ -47,6 +47,65 @@ local function FormatNumber(value)
     return formatted
 end
 
+local function GetProgressSnapshot()
+    local snapshot = {}
+
+    local stats = shared.AutoProgressStats
+
+    if stats and stats.GetSnapshot then
+        local ok, result = pcall(function()
+            return stats.GetSnapshot()
+        end)
+
+        if ok and type(result) == "table" then
+            for key, value in pairs(result) do
+                snapshot[key] = value
+            end
+        end
+    end
+
+    local function ReadDirect(name)
+        local direct = LocalPlayer:FindFirstChild(name)
+
+        if direct and direct.Value ~= nil then
+            return tonumber(direct.Value)
+        end
+
+        local attribute = LocalPlayer:GetAttribute(name)
+
+        if attribute ~= nil then
+            return tonumber(attribute)
+        end
+
+        local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
+        local stat = leaderstats and leaderstats:FindFirstChild(name)
+
+        if stat and stat.Value ~= nil then
+            return tonumber(stat.Value)
+        end
+
+        return nil
+    end
+
+    if snapshot.Level == nil then
+        snapshot.Level = ReadDirect("Level")
+    end
+
+    if snapshot.Coins == nil then
+        snapshot.Coins = ReadDirect("Coins")
+    end
+
+    if snapshot.Gems == nil then
+        snapshot.Gems = ReadDirect("Gems")
+    end
+
+    snapshot.Level = tonumber(snapshot.Level) or 0
+    snapshot.Coins = tonumber(snapshot.Coins) or 0
+    snapshot.Gems = tonumber(snapshot.Gems) or 0
+
+    return snapshot
+end
+
 local function GetStat(name)
     local stats = shared.AutoProgressStats
 
@@ -218,9 +277,16 @@ end
 local function BuildEmbed(eventType, data)
     data = type(data) == "table" and data or {}
 
-    local level = tonumber(data.Level) or GetCurrentLevel() or 0
-    local coins = tonumber(GetStat("Coins")) or 0
-    local gems = tonumber(GetStat("Gems")) or 0
+    local snapshot = GetProgressSnapshot()
+
+    local level =
+        tonumber(data.Level)
+        or tonumber(snapshot.Level)
+        or GetCurrentLevel()
+        or 0
+
+    local coins = tonumber(data.Coins) or tonumber(snapshot.Coins) or 0
+    local gems = tonumber(data.Gems) or tonumber(snapshot.Gems) or 0
     local fields = {}
     local title
     local description
@@ -395,8 +461,12 @@ function ProgressWebhook.Send(eventType, data)
             GetOwnedTowers()
             or OwnedTowers
 
+        local snapshot = GetProgressSnapshot()
+
         return SendPayload("manual", {
-            Level = GetCurrentLevel(),
+            Level = snapshot.Level,
+            Coins = snapshot.Coins,
+            Gems = snapshot.Gems,
             OwnedTowerCount = CountOwnedTowers(owned)
         })
     end
