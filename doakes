@@ -4,6 +4,7 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Globals = getgenv and getgenv() or _G
+local LOBBY_PLACE_ID = 3260590327
 
 local SendRequest =
     request
@@ -64,21 +65,21 @@ local function GetProgressSnapshot()
         end
     end
 
-    local function ReadDirect(name)
-        local direct = LocalPlayer:FindFirstChild(name)
+    local function ReadDirectLevel()
+        local direct = LocalPlayer:FindFirstChild("Level")
 
         if direct and direct.Value ~= nil then
             return tonumber(direct.Value)
         end
 
-        local attribute = LocalPlayer:GetAttribute(name)
+        local attribute = LocalPlayer:GetAttribute("Level")
 
         if attribute ~= nil then
             return tonumber(attribute)
         end
 
         local leaderstats = LocalPlayer:FindFirstChild("leaderstats")
-        local stat = leaderstats and leaderstats:FindFirstChild(name)
+        local stat = leaderstats and leaderstats:FindFirstChild("Level")
 
         if stat and stat.Value ~= nil then
             return tonumber(stat.Value)
@@ -88,15 +89,53 @@ local function GetProgressSnapshot()
     end
 
     if snapshot.Level == nil then
-        snapshot.Level = ReadDirect("Level")
+        snapshot.Level = ReadDirectLevel()
     end
 
-    if snapshot.Coins == nil then
-        snapshot.Coins = ReadDirect("Coins")
+    if game.PlaceId == LOBBY_PLACE_ID
+        and Globals.__RyaGetLobbyCurrencyBalance then
+
+        local okCoins, lobbyCoins = pcall(function()
+            return Globals.__RyaGetLobbyCurrencyBalance("Coins")
+        end)
+
+        if okCoins and tonumber(lobbyCoins) ~= nil then
+            snapshot.Coins = tonumber(lobbyCoins)
+        end
+
+        local okGems, lobbyGems = pcall(function()
+            return Globals.__RyaGetLobbyCurrencyBalance("Gems")
+        end)
+
+        if okGems and tonumber(lobbyGems) ~= nil then
+            snapshot.Gems = tonumber(lobbyGems)
+        end
     end
 
-    if snapshot.Gems == nil then
-        snapshot.Gems = ReadDirect("Gems")
+    if snapshot.Coins == nil
+        and stats
+        and stats.GetCoins then
+
+        local ok, value = pcall(function()
+            return stats.GetCoins()
+        end)
+
+        if ok and tonumber(value) ~= nil then
+            snapshot.Coins = tonumber(value)
+        end
+    end
+
+    if snapshot.Gems == nil
+        and stats
+        and stats.GetGems then
+
+        local ok, value = pcall(function()
+            return stats.GetGems()
+        end)
+
+        if ok and tonumber(value) ~= nil then
+            snapshot.Gems = tonumber(value)
+        end
     end
 
     snapshot.Level = tonumber(snapshot.Level) or 0
@@ -120,6 +159,13 @@ local function GetStat(name)
 
             return tonumber(snapshot[name]) or 0
         end
+    end
+
+    if name == "Coins"
+        or name == "Gems" then
+
+        local snapshot = GetProgressSnapshot()
+        return tonumber(snapshot[name]) or 0
     end
 
     local direct = LocalPlayer:FindFirstChild(name)
