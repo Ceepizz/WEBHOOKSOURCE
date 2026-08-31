@@ -361,6 +361,98 @@ local function CountOwnedTowers(owned)
     return count
 end
 
+local function GetSkillTreePercent()
+    local totalCurrent = 0
+    local totalMax = 0
+    local found = 0
+
+    for nodeId = 1, 17 do
+        local node = workspace:FindFirstChild(tostring(nodeId))
+        local gui = node and node:FindFirstChild("TileSurfaceGui")
+        local frame = gui and gui:FindFirstChild("Frame")
+        local skillLevel = frame and frame:FindFirstChild("SkillLevel")
+
+        if skillLevel then
+            local text = tostring(skillLevel.Text or "")
+
+            local current, maximum =
+                text:match("(%d+)%s*/%s*(%d+)")
+
+            current = tonumber(current)
+            maximum = tonumber(maximum)
+
+            if not current or not maximum then
+                local maxOnly =
+                    tonumber(
+                        text:match("MAX%s*%[(%d+)%]")
+                    )
+
+                if maxOnly then
+                    current = maxOnly
+                    maximum = maxOnly
+                end
+            end
+
+            if current and maximum and maximum > 0 then
+                found += 1
+                totalCurrent += math.min(current, maximum)
+                totalMax += maximum
+            end
+        end
+    end
+
+    if found == 17 and totalMax > 0 then
+        local percent =
+            math.floor(
+                (totalCurrent / totalMax) * 100
+                + 0.5
+            )
+
+        percent = math.clamp(percent, 0, 100)
+        Globals.__RyaLastSkillTreePercent = percent
+        return percent
+    end
+
+    local autoProgress = shared.AutoProgress
+
+    if autoProgress
+        and autoProgress.GetAutoMaxStats then
+
+        local ok, stats = pcall(function()
+            return autoProgress.GetAutoMaxStats()
+        end)
+
+        if ok and type(stats) == "table" then
+            local percent = tonumber(stats.SkillPercent)
+
+            if percent ~= nil then
+                percent =
+                    math.clamp(
+                        math.floor(percent + 0.5),
+                        0,
+                        100
+                    )
+
+                Globals.__RyaLastSkillTreePercent = percent
+                return percent
+            end
+        end
+    end
+
+    local cached =
+        tonumber(Globals.__RyaLastSkillTreePercent)
+
+    if cached ~= nil then
+        return math.clamp(
+            math.floor(cached + 0.5),
+            0,
+            100
+        )
+    end
+
+    return nil
+end
+
 local function BuildEmbed(eventType, data)
     data = type(data) == "table" and data or {}
 
@@ -439,22 +531,26 @@ local function BuildEmbed(eventType, data)
 
     local skillPercent =
         tonumber(data.SkillPercent)
+        or GetSkillTreePercent()
         or tonumber(snapshot.SkillPercent)
 
-    if skillPercent ~= nil then
-        skillPercent =
-            math.clamp(
-                math.floor(skillPercent + 0.5),
-                0,
-                100
+    table.insert(fields, {
+        name = "Skill Tree",
+        value =
+            skillPercent ~= nil
+            and (
+                tostring(
+                    math.clamp(
+                        math.floor(skillPercent + 0.5),
+                        0,
+                        100
+                    )
+                )
+                .. "%"
             )
-
-        table.insert(fields, {
-            name = "Skill Tree",
-            value = tostring(skillPercent) .. "%",
-            inline = true
-        })
-    end
+            or "Unavailable",
+        inline = true
+    })
 
     return {
         title = title,
