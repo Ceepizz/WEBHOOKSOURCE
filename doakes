@@ -112,6 +112,47 @@ local function GetProgressSnapshot()
         end
     end
 
+    local autoProgress = shared.AutoProgress
+
+    if autoProgress
+        and autoProgress.GetAutoMaxStats then
+
+        local ok, autoMaxStats = pcall(function()
+            return autoProgress.GetAutoMaxStats()
+        end)
+
+        if ok and type(autoMaxStats) == "table" then
+            local skillPercent =
+                tonumber(autoMaxStats.SkillPercent)
+
+            if skillPercent ~= nil then
+                skillPercent =
+                    math.clamp(
+                        math.floor(skillPercent + 0.5),
+                        0,
+                        100
+                    )
+
+                snapshot.SkillPercent = skillPercent
+                Globals.__RyaLastSkillTreePercent = skillPercent
+            end
+        end
+    end
+
+    if snapshot.SkillPercent == nil then
+        local cached =
+            tonumber(Globals.__RyaLastSkillTreePercent)
+
+        if cached ~= nil then
+            snapshot.SkillPercent =
+                math.clamp(
+                    math.floor(cached + 0.5),
+                    0,
+                    100
+                )
+        end
+    end
+
     if snapshot.Coins == nil
         and stats
         and stats.GetCoins then
@@ -338,25 +379,12 @@ local function BuildEmbed(eventType, data)
     local description
 
     if eventType == "level_up" then
-        local previousLevel =
-            tonumber(data.PreviousLevel)
-            or math.max(level - 1, 0)
-
         title = "Level Up!"
         description =
             "**"
             .. LocalPlayer.Name
             .. "** reached a new level."
 
-        table.insert(fields, {
-            name = "Level",
-            value =
-                FormatNumber(previousLevel)
-                .. "  **"
-                .. FormatNumber(level)
-                .. "**",
-            inline = false
-        })
     elseif eventType == "tower_bought" then
         local towerName =
             Trim(data.TowerName)
@@ -405,6 +433,25 @@ local function BuildEmbed(eventType, data)
         table.insert(fields, {
             name = "Owned Towers",
             value = FormatNumber(data.OwnedTowerCount),
+            inline = true
+        })
+    end
+
+    local skillPercent =
+        tonumber(data.SkillPercent)
+        or tonumber(snapshot.SkillPercent)
+
+    if skillPercent ~= nil then
+        skillPercent =
+            math.clamp(
+                math.floor(skillPercent + 0.5),
+                0,
+                100
+            )
+
+        table.insert(fields, {
+            name = "Skill Tree",
+            value = tostring(skillPercent) .. "%",
             inline = true
         })
     end
