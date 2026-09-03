@@ -361,6 +361,51 @@ local function CountOwnedTowers(owned)
     return count
 end
 
+local function GetGoldenSkinsOwned()
+    local stores =
+        filtergc("table", {
+            Keys = {"getState"}
+        }) or {}
+
+    local goldenOwned = {}
+
+    for _, store in ipairs(stores) do
+        local success, stateData =
+            pcall(store.getState, store)
+
+        if success and type(stateData) == "table" then
+            local skins =
+                stateData.skins
+                or stateData.Skins
+                or stateData.towerSkins
+                or stateData.TowerSkins
+
+            if type(skins) == "table" then
+                for towerName, ownedSkins in pairs(skins) do
+                    if type(ownedSkins) == "table" then
+                        for _, skinName in pairs(ownedSkins) do
+                            if skinName == "Golden" then
+                                goldenOwned[tostring(towerName)] = true
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    local towers = {}
+
+    for towerName in pairs(goldenOwned) do
+        table.insert(towers, towerName)
+    end
+
+    table.sort(towers)
+
+    return towers
+end
+
 local function GetSkillTreePercent()
     local totalCurrent = 0
     local totalMax = 0
@@ -528,6 +573,17 @@ local function BuildEmbed(eventType, data)
             inline = true
         })
     end
+
+    local goldenSkins = GetGoldenSkinsOwned()
+
+    table.insert(fields, {
+        name = "Golden Skins Owned",
+        value =
+            #goldenSkins > 0
+            and table.concat(goldenSkins, ", ")
+            or "None",
+        inline = false
+    })
 
     local skillPercent =
         tonumber(data.SkillPercent)
