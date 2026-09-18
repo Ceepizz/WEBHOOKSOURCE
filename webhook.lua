@@ -2234,14 +2234,11 @@ local function BuildGenericEmbed(
 
     AddField(
         fields,
-        "📋 Current Progress",
-        "Level: **"
+        "📋 Account Overview",
+        "┃ Status: **IDLE**"
+            .. "\n┃ Level: **"
             .. FormatNumber(snapshot.Level)
-            .. "**\nCoins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**\nGatling Gun: **"
+            .. "**\n┃ Gatling Gun: **"
             .. (
                 snapshot.GatlingOwned
                 and "✅ Purchased"
@@ -2251,8 +2248,74 @@ local function BuildGenericEmbed(
         false
     )
 
+    AddField(
+        fields,
+        "💰 Currency",
+        "Coins: **"
+            .. FormatNumber(snapshot.Coins)
+            .. "**\nGems: **"
+            .. FormatNumber(snapshot.Gems)
+            .. "**",
+        false
+    )
+
+    local owned =
+        RefreshOwnedTowerCache()
+
+    local towerCounts =
+        GetNormalTowerCounts(owned)
+
+    local goldenOwned,
+        goldenTotal =
+        GetGoldenCounts()
+
+    local skillCurrent,
+        skillTarget =
+        GetSkillTreeCounts()
+
+    local skillText =
+        skillCurrent
+        and skillTarget
+        and (
+            FormatNumber(skillCurrent)
+            .. " / "
+            .. FormatNumber(skillTarget)
+        )
+        or "Unavailable"
+
+    local goldenText =
+        FormatNumber(goldenOwned)
+        .. " / "
+        .. FormatNumber(goldenTotal)
+
+    if goldenTotal > 0
+        and goldenOwned >= goldenTotal then
+
+        goldenText =
+            "✅ " .. goldenText
+    end
+
+    AddField(
+        fields,
+        "🏰 Account Progress",
+        "Towers: **"
+            .. FormatNumber(
+                towerCounts.TotalOwned
+            )
+            .. " / "
+            .. FormatNumber(
+                towerCounts.Total
+            )
+            .. "**\nGolden Towers: **"
+            .. goldenText
+            .. "**\nSkill Tree: **"
+            .. skillText
+            .. "**",
+        false
+    )
+
     return
-        "📊 Current Progress",
+        "📊 Current Account Stats",
         fields
 end
 
@@ -2274,7 +2337,11 @@ local function BuildEmbed(
             or DetectMode()
         )
 
-    if mode == "idle"
+    -- Only match-complete events may fall back to the mode that just
+    -- finished. Manual/stats sends with no active toggle must show the
+    -- generic IDLE account-stats webhook instead of the previous farm.
+    if eventType == "match_complete"
+        and mode == "idle"
         and LastActiveMode ~= "idle" then
 
         mode = LastActiveMode
