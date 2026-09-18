@@ -1539,19 +1539,6 @@ local function BuildAutoMaxEmbed(
         true
     )
 
-    AddField(
-        fields,
-        "📈 Session Info",
-        "Matches: **"
-            .. FormatNumber(Session.Matches)
-            .. "**\nWins: **"
-            .. FormatNumber(Session.Wins)
-            .. "**\nLosses: **"
-            .. FormatNumber(Session.Losses)
-            .. "**",
-        true
-    )
-
     if eventType == "match_complete" then
         AddField(
             fields,
@@ -1753,19 +1740,6 @@ local function BuildGatlingEmbed(
             .. GetCurrentRouteLabel(
                 snapshot.Level
             )
-            .. "**",
-        true
-    )
-
-    AddField(
-        fields,
-        "📈 Session Info",
-        "Matches: **"
-            .. FormatNumber(Session.Matches)
-            .. "**\nWins: **"
-            .. FormatNumber(Session.Wins)
-            .. "**\nLosses: **"
-            .. FormatNumber(Session.Losses)
             .. "**",
         true
     )
