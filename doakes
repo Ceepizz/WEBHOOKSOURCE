@@ -2630,6 +2630,8 @@ function ProgressWebhook.Start()
             )
         end
 
+        local handledGameOver = false
+
         while WatcherRunning do
             local mode =
                 DetectMode()
@@ -2662,6 +2664,7 @@ function ProgressWebhook.Start()
 
             if rep ~= LastGameReplicator then
                 LastGameReplicator = rep
+                handledGameOver = false
 
                 if rep then
                     LastGameOver =
@@ -2671,14 +2674,22 @@ function ProgressWebhook.Start()
                 else
                     LastGameOver = nil
                 end
-            elseif rep then
+            end
+
+            if rep then
                 local isGameOver =
                     rep:GetAttribute(
                         "GameOver"
                     ) == true
 
+                if not isGameOver then
+                    handledGameOver = false
+                end
+
                 if isGameOver
-                    and LastGameOver ~= true then
+                    and not handledGameOver then
+
+                    handledGameOver = true
 
                     local matchMode =
                         mode ~= "idle"
@@ -2695,9 +2706,12 @@ function ProgressWebhook.Start()
                 end
 
                 LastGameOver = isGameOver
+            else
+                handledGameOver = false
+                LastGameOver = nil
             end
 
-            task.wait(0.25)
+            task.wait(0.2)
         end
     end)
 
@@ -2719,5 +2733,11 @@ end
 
 shared.ProgressWebhook =
     ProgressWebhook
+
+if Trim(WebhookURL) ~= "" then
+    task.defer(function()
+        ProgressWebhook.Start()
+    end)
+end
 
 return ProgressWebhook
