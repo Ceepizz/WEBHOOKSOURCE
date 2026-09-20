@@ -863,7 +863,103 @@ local function GetFarmStatus(mode)
     return "Running"
 end
 
+local function GetAutoStrategyStatus()
+    local status =
+        tostring(
+            Globals.__RyaAutoStrategyStatus
+            or ""
+        )
+
+    status =
+        StripStatusPrefix(
+            status
+        )
+
+    if status == "" then
+        return
+            Globals.__RyaAutoStrategyEnabled == true
+            and "Running Auto Strategy"
+            or "Stopped"
+    end
+
+    return status
+end
+
+local function GetAutoStrategySettings()
+    local settings = {
+        SelectedFile = "",
+        AutoRestart = false,
+        AutoSkip = false
+    }
+
+    local settingsFile =
+        "AutoProgress_"
+        .. tostring(LocalPlayer.Name)
+        .. ".json"
+
+    if type(isfile) ~= "function"
+        or type(readfile) ~= "function"
+        or not isfile(settingsFile) then
+
+        return settings
+    end
+
+    pcall(function()
+        local data =
+            HttpService:JSONDecode(
+                readfile(settingsFile)
+            )
+
+        if type(data) ~= "table" then
+            return
+        end
+
+        settings.SelectedFile =
+            tostring(
+                data.AutoStrategySelectedFile
+                or ""
+            )
+
+        settings.AutoRestart =
+            data.AutoRestartStrategy == true
+
+        settings.AutoSkip =
+            data.AutoStrategyAutoSkip == true
+    end)
+
+    return settings
+end
+
+local function GetAutoStrategyFileName()
+    local settings =
+        GetAutoStrategySettings()
+
+    local path =
+        tostring(
+            settings.SelectedFile
+            or ""
+        )
+
+    if path == "" then
+        return "None"
+    end
+
+    path =
+        path:gsub(
+            "\\",
+            "/"
+        )
+
+    return
+        path:match("([^/]+)$")
+        or path
+end
+
 local function DetectMode()
+    if Globals.__RyaAutoStrategyEnabled == true then
+        return "auto_strategy"
+    end
+
     if Globals.AutoMaxEnabled == true then
         return "auto_max"
     end
@@ -901,7 +997,9 @@ local function GetModeRunningLabel(mode)
     end
 
     local active =
-        (mode == "auto_max"
+        (mode == "auto_strategy"
+            and Globals.__RyaAutoStrategyEnabled == true)
+        or (mode == "auto_max"
             and Globals.AutoMaxEnabled == true)
         or (mode == "auto_buy"
             and Globals.AutoBuyAllTowersEnabled == true)
@@ -1484,6 +1582,100 @@ local function BuildMatchRewardsField(rewards)
         .. "**\nXP: **"
         .. FormatReward(rewards.XP)
         .. "**"
+end
+
+local function BuildAutoStrategyEmbed(
+    snapshot,
+    data
+)
+    local fields = {}
+    local eventType =
+        tostring(data.EventType or "")
+
+    local settings =
+        GetAutoStrategySettings()
+
+    local strategyFile =
+        GetAutoStrategyFileName()
+
+    local title =
+        eventType == "match_complete"
+        and "🤖 Auto Strategy — Match Complete"
+        or "🤖 Auto Strategy — Current Progress"
+
+    AddField(
+        fields,
+        "📋 Strategy Overview",
+        "┃ Status: **"
+            .. GetModeRunningLabel(
+                "auto_strategy"
+            )
+            .. "**\n┃ Strategy File: **"
+            .. strategyFile
+            .. "**",
+        false
+    )
+
+    AddField(
+        fields,
+        "⚙️ Strategy Settings",
+        "Auto Restart: "
+            .. (
+                settings.AutoRestart
+                and "✅"
+                or "❌"
+            )
+            .. "\nAuto Skip: "
+            .. (
+                settings.AutoSkip
+                and "✅"
+                or "❌"
+            ),
+        true
+    )
+
+    if eventType == "match_complete" then
+        AddField(
+            fields,
+            "✨ Match Rewards",
+            BuildMatchRewardsField(
+                data.Rewards or {}
+            ),
+            false
+        )
+    end
+
+    AddField(
+        fields,
+        "📊 Session Totals",
+        "Coins: **"
+            .. FormatNumber(snapshot.Coins)
+            .. "**\nGems: **"
+            .. FormatNumber(snapshot.Gems)
+            .. "**\nMatches: **"
+            .. FormatNumber(
+                Session.Matches
+            )
+            .. "**\nWins: **"
+            .. FormatNumber(
+                Session.Wins
+            )
+            .. "**\nLosses: **"
+            .. FormatNumber(
+                Session.Losses
+            )
+            .. "**",
+        true
+    )
+
+    AddField(
+        fields,
+        "🔄 Current State",
+        GetAutoStrategyStatus(),
+        false
+    )
+
+    return title, fields
 end
 
 local function BuildAutoMaxEmbed(
@@ -2331,7 +2523,13 @@ local function BuildEmbed(
     local title
     local fields
 
-    if mode == "auto_max" then
+    if mode == "auto_strategy" then
+        title, fields =
+            BuildAutoStrategyEmbed(
+                snapshot,
+                data
+            )
+    elseif mode == "auto_max" then
         title, fields =
             BuildAutoMaxEmbed(
                 snapshot,
