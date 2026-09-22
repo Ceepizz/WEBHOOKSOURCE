@@ -2602,6 +2602,12 @@ function ProgressWebhook.SetWebhook(url)
     Globals.WebhookURL = WebhookURL
     Globals.Webhook = WebhookURL
 
+    if WebhookURL ~= ""
+        and not WatcherRunning then
+
+        ProgressWebhook.Start()
+    end
+
     return true
 end
 
