@@ -823,6 +823,22 @@ end
 local function GetFarmStatus(mode)
     local farm = GetFarm()
 
+    if mode == "auto_strategy" then
+        local status =
+            StripStatusPrefix(
+                Globals.__RyaAutoStrategyStatus
+                or ""
+            )
+
+        if status ~= "" then
+            return status
+        end
+
+        return Globals.__RyaAutoStrategyEnabled == true
+            and "Running"
+            or "Idle"
+    end
+
     -- Tower XP must NOT use the generic AutoProgress.GetStatus().
     -- That backend can legitimately return "Gatling Gun Unlocked"
     -- when Auto Progress itself is not running, which made Tower XP
@@ -911,6 +927,10 @@ local function GetFarmStatus(mode)
 end
 
 local function DetectMode()
+    if Globals.__RyaAutoStrategyEnabled == true then
+        return "auto_strategy"
+    end
+
     if Globals.AutoMaxEnabled == true then
         return "auto_max"
     end
@@ -948,7 +968,9 @@ local function GetModeRunningLabel(mode)
     end
 
     local active =
-        (mode == "auto_max"
+        (mode == "auto_strategy"
+            and Globals.__RyaAutoStrategyEnabled == true)
+        or (mode == "auto_max"
             and Globals.AutoMaxEnabled == true)
         or (mode == "auto_buy"
             and Globals.AutoBuyAllTowersEnabled == true)
@@ -2291,6 +2313,92 @@ local function BuildStoryEmbed(
     return title, fields
 end
 
+local function BuildAutoStrategyEmbed(
+    snapshot,
+    data
+)
+    local fields = {}
+    local eventType =
+        tostring(data.EventType or "")
+
+    local title =
+        eventType == "match_complete"
+        and "🧠 Auto Strategy — Match Complete"
+        or "🧠 Auto Strategy — Current Progress"
+
+    local selectedFile =
+        tostring(
+            Globals.AutoStrategySelectedFile
+            or "None"
+        )
+
+    if selectedFile == "" then
+        selectedFile = "None"
+    end
+
+    AddField(
+        fields,
+        "📋 Strategy Overview",
+        "┃ Status: **"
+            .. GetModeRunningLabel(
+                "auto_strategy"
+            )
+            .. "**\n┃ Current State: **"
+            .. GetFarmStatus(
+                "auto_strategy"
+            )
+            .. "**\n┃ Strategy File: **"
+            .. selectedFile
+            .. "**",
+        false
+    )
+
+    if eventType == "match_complete" then
+        AddField(
+            fields,
+            "✨ Match Rewards",
+            BuildMatchRewardsField(
+                data.Rewards or {}
+            ),
+            false
+        )
+    end
+
+    AddField(
+        fields,
+        "⚙️ Strategy Settings",
+        "Auto Restart: **"
+            .. (
+                Globals.AutoRestartStrategy == true
+                and "Enabled"
+                or "Disabled"
+            )
+            .. "**\nAuto Skip: **"
+            .. (
+                Globals.AutoStrategyAutoSkip == true
+                and "Enabled"
+                or "Disabled"
+            )
+            .. "**",
+        true
+    )
+
+    AddField(
+        fields,
+        "📊 Account Stats",
+        "Level: **"
+            .. FormatNumber(snapshot.Level)
+            .. "**\nCoins: **"
+            .. FormatNumber(snapshot.Coins)
+            .. "**\nGems: **"
+            .. FormatNumber(snapshot.Gems)
+            .. "**",
+        true
+    )
+
+    return title, fields
+end
+
 local function BuildGenericEmbed(
     snapshot
 )
@@ -2421,7 +2529,13 @@ local function BuildEmbed(
     local title
     local fields
 
-    if mode == "auto_max" then
+    if mode == "auto_strategy" then
+        title, fields =
+            BuildAutoStrategyEmbed(
+                snapshot,
+                data
+            )
+    elseif mode == "auto_max" then
         title, fields =
             BuildAutoMaxEmbed(
                 snapshot,
