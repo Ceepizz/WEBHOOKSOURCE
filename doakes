@@ -2326,14 +2326,14 @@ local function BuildAutoStrategyEmbed(
         and "🧠 Auto Strategy — Match Complete"
         or "🧠 Auto Strategy — Current Progress"
 
-    local selectedFile =
+    local strategyMode =
         tostring(
-            Globals.AutoStrategySelectedFile
-            or "None"
+            Globals.__RyaAutoStrategyMode
+            or "Unknown"
         )
 
-    if selectedFile == "" then
-        selectedFile = "None"
+    if strategyMode == "" then
+        strategyMode = "Unknown"
     end
 
     AddField(
@@ -2347,8 +2347,8 @@ local function BuildAutoStrategyEmbed(
             .. GetFarmStatus(
                 "auto_strategy"
             )
-            .. "**\n┃ Strategy File: **"
-            .. selectedFile
+            .. "**\n┃ Mode: **"
+            .. strategyMode
             .. "**",
         false
     )
