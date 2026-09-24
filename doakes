@@ -1678,6 +1678,8 @@ local function BuildCurrencyFarmEmbed(
             .. FormatReward(rewards.XP)
             .. "**\nCoin Reward: **"
             .. FormatReward(rewards.Coins)
+            .. "**\nGem Reward: **"
+            .. FormatReward(rewards.Gems)
             .. "**",
         false
     )
