@@ -1939,17 +1939,19 @@ local function BuildGatlingEmbed(
     if snapshot.GatlingOwned then
         currentGoal =
             "Gatling Gun Purchased"
+    elseif snapshot.Level < 15 then
+        currentGoal =
+            "Level 15"
+    elseif snapshot.Level < 50 then
+        currentGoal =
+            "Level 50"
     elseif snapshot.Level < targetLevel then
         currentGoal =
-            "Reach Level "
-            .. FormatNumber(targetLevel)
-            .. "\nCurrent: "
-            .. FormatNumber(snapshot.Level)
-            .. " / "
+            "Level "
             .. FormatNumber(targetLevel)
     else
         currentGoal =
-            "Purchase Gatling Gun"
+            "Gatling Gun"
     end
 
     AddField(
