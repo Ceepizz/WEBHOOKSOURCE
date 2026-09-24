@@ -1258,6 +1258,18 @@ local function GetAutoMaxProgressTarget(
     end
 
     if level < 175 then
+        local coins =
+            tonumber(
+                snapshot
+                and snapshot.Coins
+            )
+            or 0
+
+        if coins < 35000 then
+            return
+                "35,000 Coins"
+        end
+
         return
             "Level 175"
     end
