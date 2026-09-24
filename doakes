@@ -931,6 +931,10 @@ local function DetectMode()
         return "auto_strategy"
     end
 
+    if Globals.CurrencyFarmEnabled == true then
+        return "currency_farm"
+    end
+
     if Globals.AutoMaxEnabled == true then
         return "auto_max"
     end
@@ -970,6 +974,8 @@ local function GetModeRunningLabel(mode)
     local active =
         (mode == "auto_strategy"
             and Globals.__RyaAutoStrategyEnabled == true)
+        or (mode == "currency_farm"
+            and Globals.CurrencyFarmEnabled == true)
         or (mode == "auto_max"
             and Globals.AutoMaxEnabled == true)
         or (mode == "auto_buy"
@@ -1643,6 +1649,40 @@ local function BuildMatchRewardsField(rewards)
         .. "**\nXP: **"
         .. FormatReward(rewards.XP)
         .. "**"
+end
+
+local function BuildCurrencyFarmEmbed(
+    snapshot,
+    data
+)
+    local fields = {}
+    local eventType =
+        tostring(data.EventType or "")
+
+    local rewards =
+        type(data.Rewards) == "table"
+        and data.Rewards
+        or {}
+
+    local title =
+        eventType == "match_complete"
+        and "💰 Currency Farm — Match Complete"
+        or "💰 Currency Farm — Current Progress"
+
+    AddField(
+        fields,
+        "📊 Currency Farm",
+        "Level: **"
+            .. FormatNumber(snapshot.Level)
+            .. "**\nXP Reward: **"
+            .. FormatReward(rewards.XP)
+            .. "**\nCoin Reward: **"
+            .. FormatReward(rewards.Coins)
+            .. "**",
+        false
+    )
+
+    return title, fields
 end
 
 local function BuildAutoMaxEmbed(
@@ -2589,6 +2629,12 @@ local function BuildEmbed(
     if mode == "auto_strategy" then
         title, fields =
             BuildAutoStrategyEmbed(
+                snapshot,
+                data
+            )
+    elseif mode == "currency_farm" then
+        title, fields =
+            BuildCurrencyFarmEmbed(
                 snapshot,
                 data
             )
