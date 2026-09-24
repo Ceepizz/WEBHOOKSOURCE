@@ -1249,17 +1249,17 @@ local function GetAutoMaxProgressTarget(
 
     if level < 15 then
         return
-            "Level 15\nRoute: Easy"
+            "Level 15"
     end
 
     if level < 50 then
         return
-            "Level 50\nRoute: Molten"
+            "Level 50"
     end
 
     if level < 175 then
         return
-            "Level 175\nRoute: Hardcore"
+            "Level 175"
     end
 
     if snapshot
