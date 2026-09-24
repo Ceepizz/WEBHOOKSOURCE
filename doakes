@@ -1684,6 +1684,24 @@ local function BuildCurrencyFarmEmbed(
         false
     )
 
+    AddField(
+        fields,
+        "📊 Session Totals",
+        "Coins: **"
+            .. FormatNumber(snapshot.Coins)
+            .. "**\nGems: **"
+            .. FormatNumber(snapshot.Gems)
+            .. "**",
+        true
+    )
+
+    AddField(
+        fields,
+        "🔄 Current State",
+        GetFarmStatus("currency_farm"),
+        false
+    )
+
     return title, fields
 end
 
