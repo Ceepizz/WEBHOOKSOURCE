@@ -1237,6 +1237,41 @@ local function GetCurrentRouteLabel(level)
     return "Progression"
 end
 
+local function GetAutoMaxProgressTarget(
+    snapshot
+)
+    local level =
+        tonumber(
+            snapshot
+            and snapshot.Level
+        )
+        or 0
+
+    if level < 15 then
+        return
+            "Level 15\nRoute: Easy"
+    end
+
+    if level < 50 then
+        return
+            "Level 50\nRoute: Molten"
+    end
+
+    if level < 175 then
+        return
+            "Level 175\nRoute: Hardcore"
+    end
+
+    if snapshot
+        and snapshot.GatlingOwned ~= true then
+
+        return
+            "Gatling Gun"
+    end
+
+    return nil
+end
+
 local function FindNextMissingCurrencyTower(
     owned,
     currency
@@ -1662,8 +1697,15 @@ local function BuildAutoMaxEmbed(
         )
     end
 
+    local progressTarget =
+        GetAutoMaxProgressTarget(
+            snapshot
+        )
+
     local target =
-        GetTargetInfo("auto_max")
+        progressTarget == nil
+        and GetTargetInfo("auto_max")
+        or nil
 
     AddField(
         fields,
@@ -1679,7 +1721,8 @@ local function BuildAutoMaxEmbed(
     AddField(
         fields,
         "🎯 Current Target",
-        FormatTarget(target),
+        progressTarget
+            or FormatTarget(target),
         true
     )
 
