@@ -319,6 +319,15 @@ local function GetProgressSnapshot()
     snapshot.Gems =
         tonumber(snapshot.Gems) or 0
 
+    snapshot.TimescaleTickets =
+        tonumber(snapshot.TimescaleTickets)
+        or tonumber(
+            ReadDirectStat(
+                "TimescaleTickets"
+            )
+        )
+        or 0
+
     snapshot.GatlingOwned =
         snapshot.GatlingOwned == true
 
@@ -1086,6 +1095,168 @@ local function GetExperienceReward()
     return fallback
 end
 
+local TIMESCALE_TICKET_ICON_ID =
+    "17447507910"
+
+local function IsTimescaleTrialMode()
+    if tostring(
+        Globals.CurrencyFarmType
+        or ""
+    ) ~= "Premium" then
+
+        return false
+    end
+
+    if tostring(
+        Globals.PremiumCurrencyFarmCurrency
+        or ""
+    ) ~= "Timescale Ticket" then
+
+        return false
+    end
+
+    local rep =
+        GetGameReplicator()
+
+    if rep then
+        local difficulty =
+            tostring(
+                rep:GetAttribute(
+                    "Difficulty"
+                )
+                or ""
+            )
+
+        local mode =
+            tostring(
+                rep:GetAttribute("Mode")
+                or rep:GetAttribute(
+                    "GameMode"
+                )
+                or ""
+            )
+
+        if difficulty == "Trial"
+            or mode == "Trials"
+            or mode == "Trial" then
+
+            return true
+        end
+    end
+
+    local farm =
+        GetFarm()
+
+    if farm
+        and farm.GetPremiumTrialStatus then
+
+        local ok,
+            currentTrial,
+            _,
+            supported =
+            pcall(function()
+                return
+                    farm.GetPremiumTrialStatus(
+                        "Timescale Ticket"
+                    )
+            end)
+
+        if ok
+            and supported == true
+            and currentTrial ~= nil
+            and tostring(currentTrial) ~= ""
+            and tostring(currentTrial) ~= "Unknown" then
+
+            return true
+        end
+    end
+
+    return false
+end
+
+local function ReadTimescaleTicketRewardFromUI()
+    local root =
+        PlayerGui:FindFirstChild(
+            "ReactGameNewRewards"
+        )
+
+    local frame =
+        root
+        and root:FindFirstChild(
+            "Frame"
+        )
+
+    local gameOver =
+        frame
+        and frame:FindFirstChild(
+            "gameOver"
+        )
+
+    local rewardsScreen =
+        gameOver
+        and gameOver:FindFirstChild(
+            "RewardsScreen"
+        )
+
+    local rewardsSection =
+        rewardsScreen
+        and rewardsScreen:FindFirstChild(
+            "RewardsSection"
+        )
+
+    if not rewardsSection then
+        return nil
+    end
+
+    for _, item in ipairs(
+        rewardsSection:GetChildren()
+    ) do
+        if tonumber(item.Name) then
+            local image =
+                item:FindFirstChildWhichIsA(
+                    "ImageLabel",
+                    true
+                )
+
+            local iconId =
+                image
+                and tostring(
+                    image.Image or ""
+                ):match("%d+")
+                or nil
+
+            if iconId
+                == TIMESCALE_TICKET_ICON_ID then
+
+                for _, child in ipairs(
+                    item:GetDescendants()
+                ) do
+                    if child:IsA(
+                        "TextLabel"
+                    ) then
+
+                        local amount =
+                            tonumber(
+                                tostring(
+                                    child.Text
+                                    or ""
+                                ):match(
+                                    "[xX]%s*(%d+)"
+                                )
+                            )
+
+                        if amount ~= nil then
+                            return amount
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
 local function GetMatchRewards()
     return {
         Coins =
@@ -1106,7 +1277,10 @@ local function GetMatchRewards()
                 "XPReward",
                 "ExpReward",
                 "Experience"
-            })
+            }),
+
+        TimescaleTickets =
+            ReadTimescaleTicketRewardFromUI()
     }
 end
 
@@ -1640,8 +1814,11 @@ local function GetStoryInfo()
     }
 end
 
-local function BuildMatchRewardsField(rewards)
-    return
+local function BuildMatchRewardsField(
+    rewards,
+    includeTimescale
+)
+    local text =
         "Coins: **"
         .. FormatReward(rewards.Coins)
         .. "**\nGems: **"
@@ -1649,6 +1826,42 @@ local function BuildMatchRewardsField(rewards)
         .. "**\nXP: **"
         .. FormatReward(rewards.XP)
         .. "**"
+
+    if includeTimescale == true then
+        text =
+            text
+            .. "\nTimescale Tickets: **"
+            .. FormatReward(
+                rewards.TimescaleTickets
+            )
+            .. "**"
+    end
+
+    return text
+end
+
+local function BuildCurrencyBalanceField(
+    snapshot,
+    includeTimescale
+)
+    local text =
+        "Coins: **"
+        .. FormatNumber(snapshot.Coins)
+        .. "**\nGems: **"
+        .. FormatNumber(snapshot.Gems)
+        .. "**"
+
+    if includeTimescale == true then
+        text =
+            text
+            .. "\nTimescale Tickets: **"
+            .. FormatNumber(
+                snapshot.TimescaleTickets
+            )
+            .. "**"
+    end
+
+    return text
 end
 
 local function BuildCurrencyFarmEmbed(
@@ -1664,41 +1877,91 @@ local function BuildCurrencyFarmEmbed(
         and data.Rewards
         or {}
 
-    local title =
-        eventType == "match_complete"
-        and "💰 Currency Farm — Match Complete"
-        or "💰 Currency Farm — Current Progress"
+    local isTimescaleTrial =
+        IsTimescaleTrialMode()
+
+    local farmType =
+        tostring(
+            Globals.CurrencyFarmType
+            or "Standard"
+        )
+
+    local selectedCurrency =
+        farmType == "Premium"
+        and tostring(
+            Globals.PremiumCurrencyFarmCurrency
+            or "None"
+        )
+        or tostring(
+            Globals.CurrencyFarmCurrency
+            or "None"
+        )
+
+    local title
+
+    if isTimescaleTrial then
+        title =
+            eventType == "match_complete"
+            and "🎟️ Timescale Ticket Farm — Match Complete"
+            or "🎟️ Timescale Ticket Farm — Current Progress"
+    else
+        title =
+            eventType == "match_complete"
+            and "💰 Currency Farm — Match Complete"
+            or "💰 Currency Farm — Current Progress"
+    end
 
     AddField(
         fields,
-        "📊 Currency Farm",
-        "Level: **"
-            .. FormatNumber(snapshot.Level)
-            .. "**\nXP Reward: **"
-            .. FormatReward(rewards.XP)
-            .. "**\nCoin Reward: **"
-            .. FormatReward(rewards.Coins)
-            .. "**\nGem Reward: **"
-            .. FormatReward(rewards.Gems)
+        "📋 Farm Overview",
+        "┃ Status: **"
+            .. GetModeRunningLabel(
+                "currency_farm"
+            )
+            .. "**\n┃ Type: **"
+            .. farmType
+            .. "**\n┃ Currency: **"
+            .. selectedCurrency
             .. "**",
         false
     )
 
-    AddField(
-        fields,
-        "📊 Session Totals",
-        "Coins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**",
-        true
-    )
+    if eventType == "match_complete" then
+        AddField(
+            fields,
+            "✨ Match Rewards",
+            BuildMatchRewardsField(
+                rewards,
+                isTimescaleTrial
+            ),
+            false
+        )
+    end
+
+    if eventType ~= "match_complete"
+        or tostring(
+            data.MatchResult or ""
+        ) == "win" then
+
+        AddField(
+            fields,
+            eventType == "match_complete"
+                and "💰 Currency After Win"
+                or "💰 Current Currency",
+            BuildCurrencyBalanceField(
+                snapshot,
+                isTimescaleTrial
+            ),
+            false
+        )
+    end
 
     AddField(
         fields,
         "🔄 Current State",
-        GetFarmStatus("currency_farm"),
+        GetFarmStatus(
+            "currency_farm"
+        ),
         false
     )
 
@@ -1737,25 +2000,6 @@ local function BuildAutoMaxEmbed(
             )
             .. "**",
         false
-    )
-
-    AddField(
-        fields,
-        "⚙️ Settings",
-        "Mode: **Auto Max**"
-            .. "\nAll Towers: "
-            .. (
-                Globals.AutoMaxAllTowers == true
-                and "✅"
-                or "❌"
-            )
-            .. "\nAll Skill Tree: "
-            .. (
-                Globals.AutoMaxAllSkillTree == true
-                and "✅"
-                or "❌"
-            ),
-        true
     )
 
     if eventType == "match_complete" then
@@ -1805,30 +2049,6 @@ local function BuildAutoMaxEmbed(
         false
     )
 
-    local owned =
-        RefreshOwnedTowerCache()
-
-    local towerCounts =
-        GetNormalTowerCounts(owned)
-
-    local goldenOwned,
-        goldenTotal =
-        GetGoldenCounts()
-
-    local skillCurrent,
-        skillTarget =
-        GetSkillTreeCounts()
-
-    local skillText =
-        skillCurrent
-        and skillTarget
-        and (
-            FormatNumber(skillCurrent)
-            .. " / "
-            .. FormatNumber(skillTarget)
-        )
-        or "Unavailable"
-
     local coinTarget = nil
     local farm = GetFarm()
 
@@ -1861,18 +2081,6 @@ local function BuildAutoMaxEmbed(
             .. FormatNumber(coinTarget)
     end
 
-    local goldenText =
-        FormatNumber(goldenOwned)
-        .. " / "
-        .. FormatNumber(goldenTotal)
-
-    if goldenTotal > 0
-        and goldenOwned >= goldenTotal then
-
-        goldenText =
-            "✅ " .. goldenText
-    end
-
     AddField(
         fields,
         "📈 Auto Max Progress",
@@ -1886,18 +2094,6 @@ local function BuildAutoMaxEmbed(
             .. coinText
             .. "**\nGems: **"
             .. FormatNumber(snapshot.Gems)
-            .. "**\nTowers: **"
-            .. FormatNumber(
-                towerCounts.TotalOwned
-            )
-            .. " / "
-            .. FormatNumber(
-                towerCounts.Total
-            )
-            .. "**\nSkill Tree: **"
-            .. skillText
-            .. "**\nGolden Towers: **"
-            .. goldenText
             .. "**\nGatling Gun: **"
             .. (
                 snapshot.GatlingOwned
@@ -2142,61 +2338,6 @@ local function BuildAutoBuyEmbed(
         fields,
         "🔄 Current State",
         GetFarmStatus("auto_buy"),
-        false
-    )
-
-    local owned =
-        RefreshOwnedTowerCache()
-
-    local towerCounts =
-        GetNormalTowerCounts(owned)
-
-    local goldenOwned,
-        goldenTotal =
-        GetGoldenCounts()
-
-    local goldenText =
-        FormatNumber(goldenOwned)
-        .. " / "
-        .. FormatNumber(goldenTotal)
-
-    if goldenTotal > 0
-        and goldenOwned >= goldenTotal then
-
-        goldenText =
-            "✅ " .. goldenText
-    end
-
-    AddField(
-        fields,
-        "🏰 Tower Progress",
-        "Coin Towers: **"
-            .. FormatNumber(
-                towerCounts.CoinOwned
-            )
-            .. " / "
-            .. FormatNumber(
-                towerCounts.CoinTotal
-            )
-            .. "**\nGem Towers: **"
-            .. FormatNumber(
-                towerCounts.GemOwned
-            )
-            .. " / "
-            .. FormatNumber(
-                towerCounts.GemTotal
-            )
-            .. "**\nGolden Towers: **"
-            .. goldenText
-            .. "**\nTotal Towers: **"
-            .. FormatNumber(
-                towerCounts.TotalOwned
-            )
-            .. " / "
-            .. FormatNumber(
-                towerCounts.Total
-            )
-            .. "**",
         false
     )
 
@@ -2548,61 +2689,6 @@ local function BuildGenericEmbed(
         false
     )
 
-    local owned =
-        RefreshOwnedTowerCache()
-
-    local towerCounts =
-        GetNormalTowerCounts(owned)
-
-    local goldenOwned,
-        goldenTotal =
-        GetGoldenCounts()
-
-    local skillCurrent,
-        skillTarget =
-        GetSkillTreeCounts()
-
-    local skillText =
-        skillCurrent
-        and skillTarget
-        and (
-            FormatNumber(skillCurrent)
-            .. " / "
-            .. FormatNumber(skillTarget)
-        )
-        or "Unavailable"
-
-    local goldenText =
-        FormatNumber(goldenOwned)
-        .. " / "
-        .. FormatNumber(goldenTotal)
-
-    if goldenTotal > 0
-        and goldenOwned >= goldenTotal then
-
-        goldenText =
-            "✅ " .. goldenText
-    end
-
-    AddField(
-        fields,
-        "🏰 Account Progress",
-        "Towers: **"
-            .. FormatNumber(
-                towerCounts.TotalOwned
-            )
-            .. " / "
-            .. FormatNumber(
-                towerCounts.Total
-            )
-            .. "**\nGolden Towers: **"
-            .. goldenText
-            .. "**\nSkill Tree: **"
-            .. skillText
-            .. "**",
-        false
-    )
-
     return
         "📊 Current Account Stats",
         fields
@@ -2693,6 +2779,25 @@ local function BuildEmbed(
             BuildGenericEmbed(
                 snapshot
             )
+    end
+
+    if tostring(
+        data.EventType or ""
+    ) == "match_complete"
+        and tostring(
+            data.MatchResult or ""
+        ) == "win"
+        and mode ~= "currency_farm" then
+
+        AddField(
+            fields,
+            "💰 Currency After Win",
+            BuildCurrencyBalanceField(
+                snapshot,
+                false
+            ),
+            false
+        )
     end
 
     return {
