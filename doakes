@@ -1941,17 +1941,30 @@ local function BuildCurrencyFarmEmbed(
     if eventType ~= "match_complete"
         or tostring(
             data.MatchResult or ""
-        ) == "win" then
+        ) == "win"
+        or isTimescaleTrial then
 
         AddField(
             fields,
             eventType == "match_complete"
-                and "💰 Currency After Win"
+                and (
+                    isTimescaleTrial
+                    and "🎟️ Total Timescale Tickets"
+                    or "💰 Currency After Win"
+                )
                 or "💰 Current Currency",
-            BuildCurrencyBalanceField(
-                snapshot,
-                isTimescaleTrial
-            ),
+            isTimescaleTrial
+                and (
+                    "Timescale Tickets: **"
+                    .. FormatNumber(
+                        snapshot.TimescaleTickets
+                    )
+                    .. "**"
+                )
+                or BuildCurrencyBalanceField(
+                    snapshot,
+                    false
+                ),
             false
         )
     end
