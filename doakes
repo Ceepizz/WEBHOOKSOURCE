@@ -1139,12 +1139,15 @@ local function ReadXPRewardFromUI()
                         )
 
                     if amountText then
+                        local cleanAmount =
+                            amountText:gsub(
+                                ",",
+                                ""
+                            )
+
                         local amount =
                             tonumber(
-                                amountText:gsub(
-                                    ",",
-                                    ""
-                                )
+                                cleanAmount
                             )
 
                         if amount ~= nil then
@@ -2972,18 +2975,18 @@ local function SendPayload(
 
     Sending = true
 
-    local payload = {
-        username = "Rya Progression",
-        embeds = {
-            BuildEmbed(
-                eventType,
-                data
-            )
-        }
-    }
-
     local success, response =
         pcall(function()
+            local payload = {
+                username = "Rya Progression",
+                embeds = {
+                    BuildEmbed(
+                        eventType,
+                        data
+                    )
+                }
+            }
+
             return SendRequest({
                 Url = webhook,
                 Method = "POST",
