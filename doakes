@@ -3085,6 +3085,12 @@ local function HandleMatchComplete(
                 ReadMatchTimeFromUI()
         }
     )
+
+    Globals.__RyaWebhookMatchCompleteSerial =
+        (tonumber(
+            Globals.__RyaWebhookMatchCompleteSerial
+        ) or 0)
+        + 1
 end
 
 function ProgressWebhook.SetWebhook(url)
