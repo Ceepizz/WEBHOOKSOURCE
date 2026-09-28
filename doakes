@@ -1052,47 +1052,176 @@ local function ReadRewardAttribute(names)
     return nil
 end
 
-local function GetExperienceReward()
-    local stateReplicators =
-        ReplicatedStorage:FindFirstChild(
-            "StateReplicators"
+local function GetRewardsScreen()
+    local root =
+        PlayerGui:FindFirstChild(
+            "ReactGameNewRewards"
         )
 
-    if not stateReplicators then
+    local frame =
+        root
+        and root:FindFirstChild(
+            "Frame"
+        )
+
+    local gameOver =
+        frame
+        and frame:FindFirstChild(
+            "gameOver"
+        )
+
+    return
+        gameOver
+        and gameOver:FindFirstChild(
+            "RewardsScreen"
+        )
+        or nil
+end
+
+local function ReadXPRewardFromUI()
+    local rewardsScreen =
+        GetRewardsScreen()
+
+    local rewardsSection =
+        rewardsScreen
+        and rewardsScreen:FindFirstChild(
+            "RewardsSection"
+        )
+
+    if not rewardsSection then
         return nil
     end
 
-    local fallback = nil
-
-    for _, replicator in ipairs(
-        stateReplicators:GetChildren()
+    for _, item in ipairs(
+        rewardsSection:GetChildren()
     ) do
-        local experienceReward =
-            tonumber(
-                replicator:GetAttribute(
-                    "ExperienceReward"
-                )
-            )
+        if tonumber(item.Name) then
+            local labels = {}
 
-        if experienceReward ~= nil then
-            local userId =
-                tonumber(
-                    replicator:GetAttribute(
-                        "UserId"
+            for _, child in ipairs(
+                item:GetDescendants()
+            ) do
+                if child:IsA(
+                    "TextLabel"
+                ) then
+                    table.insert(
+                        labels,
+                        tostring(
+                            child.Text
+                            or ""
+                        )
                     )
-                )
-
-            if userId == LocalPlayer.UserId then
-                return experienceReward
+                end
             end
 
-            if fallback == nil then
-                fallback = experienceReward
+            local isXPReward = false
+
+            for _, textValue in ipairs(
+                labels
+            ) do
+                if textValue:upper():find(
+                    "XP",
+                    1,
+                    true
+                ) then
+                    isXPReward = true
+                    break
+                end
+            end
+
+            if isXPReward then
+                for _, textValue in ipairs(
+                    labels
+                ) do
+                    local amountText =
+                        textValue:match(
+                            "([%d,]+)"
+                        )
+
+                    if amountText then
+                        local amount =
+                            tonumber(
+                                amountText:gsub(
+                                    ",",
+                                    ""
+                                )
+                            )
+
+                        if amount ~= nil then
+                            return amount
+                        end
+                    end
+                end
+
+                return 0
             end
         end
     end
 
-    return fallback
+    return nil
+end
+
+local function ReadMatchTimeFromUI()
+    local rewardsScreen =
+        GetRewardsScreen()
+
+    local gameStats =
+        rewardsScreen
+        and rewardsScreen:FindFirstChild(
+            "gameStats"
+        )
+
+    local statsList =
+        gameStats
+        and gameStats:FindFirstChild(
+            "stats"
+        )
+
+    if not statsList then
+        return nil
+    end
+
+    for _, frame in ipairs(
+        statsList:GetChildren()
+    ) do
+        local label =
+            frame:FindFirstChild(
+                "textLabel"
+            )
+
+        local valueHolder =
+            frame:FindFirstChild(
+                "textLabel2"
+            )
+
+        local refLabel =
+            valueHolder
+            and valueHolder:FindFirstChild(
+                "refLabel"
+            )
+
+        if label
+            and refLabel
+            and tostring(
+                label.Text or ""
+            ):find(
+                "Time Completed:",
+                1,
+                true
+            ) then
+
+            local value =
+                Trim(
+                    refLabel.Text
+                )
+
+            if value ~= "" then
+                return value
+            end
+        end
+    end
+
+    return nil
 end
 
 local TIMESCALE_TICKET_ICON_ID =
@@ -1272,12 +1401,7 @@ local function GetMatchRewards()
             }),
 
         XP =
-            GetExperienceReward()
-            or ReadRewardAttribute({
-                "XPReward",
-                "ExpReward",
-                "Experience"
-            }),
+            ReadXPRewardFromUI(),
 
         TimescaleTickets =
             ReadTimescaleTicketRewardFromUI()
@@ -2769,6 +2893,28 @@ local function BuildEmbed(
 
     if tostring(
         data.EventType or ""
+    ) == "match_complete" then
+
+        local matchTime =
+            Trim(
+                data.MatchTime
+                or ""
+            )
+
+        if matchTime ~= "" then
+            AddField(
+                fields,
+                "⏱️ Match Time",
+                "**"
+                    .. matchTime
+                    .. "**",
+                true
+            )
+        end
+    end
+
+    if tostring(
+        data.EventType or ""
     ) == "match_complete"
         and tostring(
             data.MatchResult or ""
@@ -2920,7 +3066,9 @@ local function HandleMatchComplete(
         {
             Mode = mode,
             Rewards = rewards,
-            MatchResult = result
+            MatchResult = result,
+            MatchTime =
+                ReadMatchTimeFromUI()
         }
     )
 end
