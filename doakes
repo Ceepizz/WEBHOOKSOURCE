@@ -3028,7 +3028,21 @@ local function HandleMatchComplete(
     mode,
     rep
 )
-    task.wait(1.25)
+    -- Wait for the game-over rewards UI instead of assuming it is ready
+    -- after a fixed delay. XP and match time are both read from this UI.
+    local rewardWaitStartedAt =
+        os.clock()
+
+    repeat
+        if GetRewardsScreen() then
+            break
+        end
+
+        task.wait(0.1)
+    until os.clock() - rewardWaitStartedAt >= 4
+
+    -- Small render/update grace once the screen exists.
+    task.wait(0.25)
 
     local snapshot =
         GetProgressSnapshot()
