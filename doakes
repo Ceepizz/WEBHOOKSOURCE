@@ -1972,8 +1972,7 @@ local function BuildMatchRewardsField(
             .. "**"
     )
 
-    if includeTimescale == true
-        and (tonumber(rewards.TimescaleTickets) or 0) > 0 then
+    if (tonumber(rewards.TimescaleTickets) or 0) > 0 then
 
         table.insert(
             lines,
@@ -1999,7 +1998,9 @@ local function BuildCurrencyBalanceField(
         .. FormatNumber(snapshot.Gems)
         .. "**"
 
-    if includeTimescale == true then
+    if includeTimescale == true
+        or (tonumber(snapshot.TimescaleTickets) or 0) > 0 then
+
         text =
             text
             .. "\nTimescale Tickets: **"
