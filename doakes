@@ -2169,11 +2169,10 @@ local function BuildAutoMaxEmbed(
     AddField(
         fields,
         "📊 Session Totals",
-        "Coins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**",
+        BuildCurrencyBalanceField(
+            snapshot,
+            false
+        ),
         true
     )
 
@@ -2324,11 +2323,11 @@ local function BuildGatlingEmbed(
     AddField(
         fields,
         "📊 Session Totals",
-        "Coins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**\nLevels Gained: **+"
+        BuildCurrencyBalanceField(
+            snapshot,
+            false
+        )
+            .. "\nLevels Gained: **+"
             .. FormatNumber(
                 math.max(
                     snapshot.Level
@@ -2462,11 +2461,10 @@ local function BuildAutoBuyEmbed(
     AddField(
         fields,
         "📊 Session Totals",
-        "Coins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**",
+        BuildCurrencyBalanceField(
+            snapshot,
+            false
+        ),
         true
     )
 
@@ -2533,11 +2531,10 @@ local function BuildTowerXPEmbed(
     AddField(
         fields,
         "📊 Session Totals",
-        "Coins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**",
+        BuildCurrencyBalanceField(
+            snapshot,
+            false
+        ),
         false
     )
 
@@ -2609,11 +2606,10 @@ local function BuildStoryEmbed(
     AddField(
         fields,
         "📊 Session Totals",
-        "Coins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**",
+        BuildCurrencyBalanceField(
+            snapshot,
+            false
+        ),
         false
     )
 
@@ -2762,11 +2758,11 @@ local function BuildAutoStrategyEmbed(
         "📊 Account Stats",
         "Level: **"
             .. FormatNumber(snapshot.Level)
-            .. "**\nCoins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**",
+            .. "**\n"
+            .. BuildCurrencyBalanceField(
+                snapshot,
+                false
+            ),
         true
     )
 
@@ -2797,11 +2793,10 @@ local function BuildGenericEmbed(
     AddField(
         fields,
         "💰 Currency",
-        "Coins: **"
-            .. FormatNumber(snapshot.Coins)
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**",
+        BuildCurrencyBalanceField(
+            snapshot,
+            false
+        ),
         false
     )
 
