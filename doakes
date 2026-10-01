@@ -1945,26 +1945,47 @@ local function BuildMatchRewardsField(
     rewards,
     includeTimescale
 )
-    local text =
-        "Coins: **"
-        .. FormatReward(rewards.Coins)
-        .. "**\nGems: **"
-        .. FormatReward(rewards.Gems)
-        .. "**\nXP: **"
-        .. FormatReward(rewards.XP)
-        .. "**"
+    local lines = {}
 
-    if includeTimescale == true then
-        text =
-            text
-            .. "\nTimescale Tickets: **"
-            .. FormatReward(
-                rewards.TimescaleTickets
-            )
-            .. "**"
+    if (tonumber(rewards.Coins) or 0) > 0 then
+        table.insert(
+            lines,
+            "Coins: **"
+                .. FormatReward(rewards.Coins)
+                .. "**"
+        )
     end
 
-    return text
+    if (tonumber(rewards.Gems) or 0) > 0 then
+        table.insert(
+            lines,
+            "Gems: **"
+                .. FormatReward(rewards.Gems)
+                .. "**"
+        )
+    end
+
+    table.insert(
+        lines,
+        "XP: **"
+            .. FormatReward(rewards.XP)
+            .. "**"
+    )
+
+    if includeTimescale == true
+        and (tonumber(rewards.TimescaleTickets) or 0) > 0 then
+
+        table.insert(
+            lines,
+            "Timescale Tickets: **"
+                .. FormatReward(
+                    rewards.TimescaleTickets
+                )
+                .. "**"
+        )
+    end
+
+    return table.concat(lines, "\n")
 end
 
 local function BuildCurrencyBalanceField(
@@ -2878,6 +2899,28 @@ local function BuildEmbed(
     if tostring(
         data.EventType or ""
     ) == "match_complete" then
+
+        local matchResult =
+            tostring(
+                data.MatchResult
+                or ""
+            ):lower()
+
+        if matchResult == "win" then
+            AddField(
+                fields,
+                "🏁 Match Result",
+                "**✅ WIN**",
+                true
+            )
+        elseif matchResult == "loss" then
+            AddField(
+                fields,
+                "🏁 Match Result",
+                "**❌ LOSE**",
+                true
+            )
+        end
 
         local matchTime =
             Trim(
