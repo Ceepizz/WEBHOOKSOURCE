@@ -2485,6 +2485,73 @@ local function BuildAutoBuyEmbed(
     return title, fields
 end
 
+local function GetTowerXPFarmTargets(selectedTower)
+    selectedTower =
+        tostring(
+            selectedTower
+            or ""
+        )
+
+    local towerXP =
+        type(StrategyConfig) == "table"
+        and type(StrategyConfig.TowerXP) == "table"
+        and StrategyConfig.TowerXP
+        or {}
+
+    local modes =
+        type(towerXP.Modes) == "table"
+        and towerXP.Modes
+        or {}
+
+    for _, modeConfig in ipairs(modes) do
+        if type(modeConfig) == "table" then
+            local modeName =
+                tostring(
+                    modeConfig.GameName
+                    or modeConfig.Name
+                    or ""
+                )
+
+            if modeName == selectedTower then
+                local farmTowers =
+                    type(modeConfig.FarmTowers) == "table"
+                    and modeConfig.FarmTowers
+                    or {}
+
+                if #farmTowers > 0 then
+                    local targets = {}
+
+                    for _, towerName in ipairs(farmTowers) do
+                        towerName =
+                            tostring(
+                                towerName
+                                or ""
+                            )
+
+                        if towerName ~= "" then
+                            targets[
+                                #targets + 1
+                            ] = towerName
+                        end
+                    end
+
+                    return targets
+                end
+            end
+        end
+    end
+
+    if selectedTower ~= ""
+        and selectedTower ~= "None" then
+
+        return {
+            selectedTower
+        }
+    end
+
+    return {}
+end
+
 local function BuildTowerXPEmbed(
     snapshot,
     data
@@ -2499,21 +2566,52 @@ local function BuildTowerXPEmbed(
             or "None"
         )
 
-    local title =
-        eventType == "match_complete"
-        and "🧪 Auto Farm Tower XP — Match Complete"
-        or "🧪 Auto Farm Tower XP — Current Progress"
+    local farmTargets =
+        GetTowerXPFarmTargets(
+            selectedTower
+        )
+
+    local isMultiTowerFarm =
+        #farmTargets > 1
+
+    local title
+
+    if isMultiTowerFarm then
+        title =
+            eventType == "match_complete"
+            and "🧪 Farm All Tower XP — Match Complete"
+            or "🧪 Farm All Tower XP — Current Progress"
+    else
+        title =
+            eventType == "match_complete"
+            and "🧪 Auto Farm Tower XP — Match Complete"
+            or "🧪 Auto Farm Tower XP — Current Progress"
+    end
+
+    local overview =
+        "┃ Status: **"
+        .. GetModeRunningLabel(
+            "tower_xp"
+        )
+        .. "**\n┃ Mode: **"
+        .. selectedTower
+        .. "**"
+
+    if #farmTargets > 0 then
+        overview =
+            overview
+            .. "\n┃ Farm Targets: **"
+            .. table.concat(
+                farmTargets,
+                ", "
+            )
+            .. "**"
+    end
 
     AddField(
         fields,
         "📋 Tower Overview",
-        "┃ Status: **"
-            .. GetModeRunningLabel(
-                "tower_xp"
-            )
-            .. "**\n┃ Selected Tower: **"
-            .. selectedTower
-            .. "**",
+        overview,
         false
     )
 
