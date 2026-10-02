@@ -1497,6 +1497,27 @@ local function GetMatchResult(rep)
         end
     end
 
+    if rep
+        and rep:GetAttribute(
+            "GameOver"
+        ) == true then
+
+        local health =
+            tonumber(
+                rep:GetAttribute(
+                    "Health"
+                )
+            )
+
+        if health ~= nil then
+            if health <= 0 then
+                return "loss"
+            end
+
+            return "win"
+        end
+    end
+
     return nil
 end
 
