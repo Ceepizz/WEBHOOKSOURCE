@@ -2212,61 +2212,6 @@ local function BuildAutoMaxEmbed(
         false
     )
 
-    local coinTarget = nil
-    local farm = GetFarm()
-
-    if farm
-        and farm.GetAutoMaxCoinFarmState then
-
-        local ok, active, targetAmount =
-            pcall(function()
-                return
-                    farm.GetAutoMaxCoinFarmState()
-            end)
-
-        if ok
-            and active == true
-            and tonumber(targetAmount)
-            and tonumber(targetAmount) > 0 then
-
-            coinTarget =
-                tonumber(targetAmount)
-        end
-    end
-
-    local coinText =
-        FormatNumber(snapshot.Coins)
-
-    if coinTarget then
-        coinText =
-            coinText
-            .. " / "
-            .. FormatNumber(coinTarget)
-    end
-
-    AddField(
-        fields,
-        "📈 Auto Max Progress",
-        "Level: **"
-            .. FormatNumber(snapshot.Level)
-            .. " / "
-            .. FormatNumber(
-                GetAutoProgressTargetLevel()
-            )
-            .. "**\nCoins: **"
-            .. coinText
-            .. "**\nGems: **"
-            .. FormatNumber(snapshot.Gems)
-            .. "**\nGatling Gun: **"
-            .. (
-                snapshot.GatlingOwned
-                and "✅ Purchased"
-                or "🔒 Locked"
-            )
-            .. "**",
-        false
-    )
-
     return title, fields
 end
 
@@ -3053,25 +2998,6 @@ local function BuildEmbed(
                 true
             )
         end
-    end
-
-    if tostring(
-        data.EventType or ""
-    ) == "match_complete"
-        and tostring(
-            data.MatchResult or ""
-        ) == "win"
-        and mode ~= "currency_farm" then
-
-        AddField(
-            fields,
-            "💰 Currency After Win",
-            BuildCurrencyBalanceField(
-                snapshot,
-                false
-            ),
-            false
-        )
     end
 
     return {
