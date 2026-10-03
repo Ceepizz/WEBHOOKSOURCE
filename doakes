@@ -27,6 +27,10 @@ local WebhookURL =
     )
 
 local WatcherRunning = false
+Globals.__RyaWebhookWatcherVersion =
+    tonumber(
+        Globals.__RyaWebhookWatcherVersion
+    ) or 0
 local Sending = false
 local LastDetectedLevel = nil
 local LastGameReplicator = nil
@@ -3094,7 +3098,8 @@ end
 
 local function HandleMatchComplete(
     mode,
-    rep
+    rep,
+    watcherVersion
 )
     -- Wait for the game-over rewards UI instead of assuming it is ready
     -- after a fixed delay. XP and match time are both read from this UI.
@@ -3111,6 +3116,14 @@ local function HandleMatchComplete(
 
     -- Small render/update grace once the screen exists.
     task.wait(0.25)
+
+    if watcherVersion ~= nil
+        and watcherVersion ~= tonumber(
+            Globals.__RyaWebhookWatcherVersion
+        ) then
+
+        return false
+    end
 
     local snapshot =
         GetProgressSnapshot()
@@ -3142,6 +3155,14 @@ local function HandleMatchComplete(
 
     local rewards =
         GetMatchRewards()
+
+    if watcherVersion ~= nil
+        and watcherVersion ~= tonumber(
+            Globals.__RyaWebhookWatcherVersion
+        ) then
+
+        return false
+    end
 
     SendPayload(
         "match_complete",
@@ -3218,6 +3239,15 @@ function ProgressWebhook.Start()
 
     WatcherRunning = true
 
+    Globals.__RyaWebhookWatcherVersion =
+        (tonumber(
+            Globals.__RyaWebhookWatcherVersion
+        ) or 0)
+        + 1
+
+    local myWatcherVersion =
+        Globals.__RyaWebhookWatcherVersion
+
     task.spawn(function()
         if not game:IsLoaded() then
             game.Loaded:Wait()
@@ -3241,7 +3271,10 @@ function ProgressWebhook.Start()
 
         local handledGameOver = false
 
-        while WatcherRunning do
+        while WatcherRunning
+            and myWatcherVersion == tonumber(
+                Globals.__RyaWebhookWatcherVersion
+            ) do
             local mode =
                 DetectMode()
 
@@ -3309,7 +3342,8 @@ function ProgressWebhook.Start()
                         task.spawn(
                             HandleMatchComplete,
                             matchMode,
-                            rep
+                            rep,
+                            myWatcherVersion
                         )
                     end
                 end
@@ -3329,6 +3363,13 @@ end
 
 function ProgressWebhook.Stop()
     WatcherRunning = false
+
+    Globals.__RyaWebhookWatcherVersion =
+        (tonumber(
+            Globals.__RyaWebhookWatcherVersion
+        ) or 0)
+        + 1
+
     return true
 end
 
