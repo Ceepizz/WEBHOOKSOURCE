@@ -834,6 +834,20 @@ local function GetFarm()
 end
 
 local function GetFarmStatus(mode)
+    if mode == "auto_event" then
+        if Globals.AutoEventEnabled ~= true then
+            return "Idle"
+        end
+        local rep = GetGameReplicator()
+        if rep and rep:GetAttribute("GameOver") == true then
+            return "Restarting Match..."
+        end
+        if game.PlaceId == LOBBY_PLACE_ID then
+            return "Event Matchmaking..."
+        end
+        return "Running Halloween 2026 Event"
+    end
+
     local farm = GetFarm()
 
     if mode == "auto_strategy" then
@@ -940,6 +954,10 @@ local function GetFarmStatus(mode)
 end
 
 local function DetectMode()
+    if Globals.AutoEventEnabled == true then
+        return "auto_event"
+    end
+
     if Globals.__RyaAutoStrategyEnabled == true then
         return "auto_strategy"
     end
@@ -985,7 +1003,9 @@ local function GetModeRunningLabel(mode)
     end
 
     local active =
-        (mode == "auto_strategy"
+        (mode == "auto_event"
+            and Globals.AutoEventEnabled == true)
+        or (mode == "auto_strategy"
             and Globals.__RyaAutoStrategyEnabled == true)
         or (mode == "currency_farm"
             and Globals.CurrencyFarmEnabled == true)
@@ -2837,6 +2857,46 @@ local function BuildAutoStrategyEmbed(
     return title, fields
 end
 
+local function BuildAutoEventEmbed(snapshot, data)
+    local fields = {}
+    local complete = tostring(data.EventType or "") == "match_complete"
+    local night = tostring(Globals.EventNight or "Night 1")
+    local difficulty = tostring(Globals.EventMode or "Hard")
+    local title = complete
+        and "🎃 Halloween 2026 — Match Complete"
+        or "🎃 Halloween 2026 — Current Progress"
+
+    AddField(
+        fields,
+        "🎃 Event Overview",
+        "┃ Status: **" .. GetModeRunningLabel("auto_event")
+            .. "**\n┃ Current State: **" .. GetFarmStatus("auto_event")
+            .. "**\n┃ Event: **Halloween 2026**"
+            .. "\n┃ Night: **" .. night .. "**"
+            .. "\n┃ Difficulty: **" .. difficulty .. "**",
+        false
+    )
+
+    if complete then
+        AddField(
+            fields,
+            "✨ Match Rewards",
+            BuildMatchRewardsField(data.Rewards or {}),
+            false
+        )
+    end
+
+    AddField(
+        fields,
+        "📊 Account Stats",
+        "Level: **" .. FormatNumber(snapshot.Level) .. "**\n"
+            .. BuildCurrencyBalanceField(snapshot, false),
+        false
+    )
+
+    return title, fields
+end
+
 local function BuildGenericEmbed(
     snapshot
 )
@@ -2911,7 +2971,13 @@ local function BuildEmbed(
     local title
     local fields
 
-    if mode == "auto_strategy" then
+    if mode == "auto_event" then
+        title, fields =
+            BuildAutoEventEmbed(
+                snapshot,
+                data
+            )
+    elseif mode == "auto_strategy" then
         title, fields =
             BuildAutoStrategyEmbed(
                 snapshot,
